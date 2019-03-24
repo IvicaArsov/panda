@@ -109,6 +109,23 @@ defmodule Panda do
   end
 
   @doc """
+  Get or create :panda_cache.
+  """
+
+  defp get_cache() do
+    case :ets.whereis(:panada_cache) do
+      :undefined -> :ets.new(:panada_cache, [:named_table]) |> :ets.whereis
+      tid -> tid
+    end
+  end
+
+  defp calc_odds_for_match(match_id) do
+    resp = api_call("matches/#{match_id}")
+    %{"opponents" => opponents, "begin_at" => begin_at} = resp["body"]
+    get_direct_games_odds(opponents, begin_at)
+  end
+
+  @doc """
   Simplistic odds for match.
   It looks at games between the teams in the past two years and
   calculates the probability depending on who won and the date
@@ -117,9 +134,15 @@ defmodule Panda do
   """
 
   def odds_for_match(match_id) do
-    resp = api_call("matches/#{match_id}")
-    %{"opponents" => opponents, "begin_at" => begin_at} = resp["body"]
-    get_direct_games_odds(opponents, begin_at)
+    cache = get_cache()
+    case :ets.lookup(cache, match_id) do
+      [result | _] -> result
+      [] ->
+        odds = calc_odds_for_match(match_id)
+        :ets.insert(cache, {match_id, odds})
+        odds
+    end
+
   end
 
 end
