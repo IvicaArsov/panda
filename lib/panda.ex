@@ -108,6 +108,14 @@ defmodule Panda do
     end)
   end
 
+  @doc """
+  Simplistic odds for match.
+  It looks at games between the teams in the past two years and
+  calculates the probability depending on who won and the date
+  of the game.
+  Older games have less influence on the odds.
+  """
+
   def odds_for_match(match_id) do
     resp = api_call("matches/#{match_id}")
     %{"opponents" => opponents, "begin_at" => begin_at} = resp["body"]
