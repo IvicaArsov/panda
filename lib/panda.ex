@@ -36,11 +36,16 @@ defmodule Panda do
     resp = api_call(url)
     matches = resp["body"]
     {total, ""} = Integer.parse(resp["total"])
-    Enum.reduce(1..div(total, 100), matches, fn
-      x, acc ->
+    parent = self()
+    Enum.map(1..div(total, 100), fn
+      x ->
         page_url = "#{url}&page=#{x+1}"
-        resp = api_call(page_url)
-        acc ++ resp["body"]
+        Task.async(fn -> api_call(page_url) end)
+    end)
+    |> Enum.map(&Task.await/1)
+    |> Enum.reduce(matches, fn
+      x, acc ->
+        acc ++ x["body"]
     end)
   end
 
@@ -61,7 +66,10 @@ defmodule Panda do
   defp get_direct_games_odds(opponents, begin_at) do
     # Fetch all the games for each opponent where each opponent won.
     won_matches = Enum.map(opponents, fn
-      opp -> %{ "opponent" => opp["opponent"], "wins" => fetch_won_matches(opp["opponent"]["id"], begin_at)}
+      opp -> %{ "opponent" => opp["opponent"], "wins" => Task.async(fn -> fetch_won_matches(opp["opponent"]["id"], begin_at) end) }
+    end)
+    |> Enum.map(fn
+      opp -> %{ "opponent" => opp["opponent"], "wins" => Task.await(opp["wins"])}
     end)
 
     match_date = Timex.parse!(begin_at, "{ISO:Extended}")
