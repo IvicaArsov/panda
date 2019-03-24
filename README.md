@@ -22,3 +22,10 @@ If [available in Hex](https://hex.pm/docs/publish), the package can be installed
     end
     ```
 
+  3. Ensure api key is configured in config/#{Mix.env}.api_key.exs:
+
+    ```elixir
+    use Mix.Config
+
+    config :panda, api_key: "<YOUR PANDASCORE API KEY>"
+    ```
